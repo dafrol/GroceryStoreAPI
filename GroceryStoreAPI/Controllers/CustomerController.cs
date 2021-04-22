@@ -1,11 +1,7 @@
 ﻿using GroceryStoreAPI.Models;
 using GroceryStoreAPI.Utils;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace GroceryStoreAPI.Controllers
 {
@@ -22,29 +18,42 @@ namespace GroceryStoreAPI.Controllers
         }
 
         [HttpGet]
-        public IEnumerable<Customer> GetCustomers() => 
-            _customerRepository.Customers;
+        public ActionResult<IEnumerable<Customer>> GetCustomers()
+        {
+            return new OkObjectResult(_customerRepository.GetCustomers());
+        }
 
         [HttpGet("{id}")]
         public ActionResult<Customer> GetCustomer(int id)
         {
-            foreach (Customer customer in _customerRepository.Customers)
+            Customer customer = _customerRepository.GetCustomer(id);
+            if (customer != null)
             {
-                if (customer.Id == id)
-                {
-                    return Ok(customer);
-                }
+                return new OkObjectResult(customer);
             }
             return BadRequest($"Customer with Id {id} not found.");
         }
 
         [HttpPost]
-        public Customer Post([FromBody] Customer customer) =>
-            _customerRepository.AddCustomer(customer);
-            
+        public ActionResult<Customer> Post([FromBody] Customer customer)
+        {
+            KeyValuePair<string, Customer> addedCustomer = _customerRepository.AddCustomer(customer);
+            if (string.IsNullOrEmpty(addedCustomer.Key))
+            {
+                return addedCustomer.Value;
+            }
+            return BadRequest($"Error adding customer: {addedCustomer.Key}");
+        }
 
         [HttpPut]
-        public Customer Put([FromBody] Customer customer) => 
-            _customerRepository.UpdateCustomer(customer);
+        public ActionResult<Customer> Put([FromBody] Customer customer)
+        {
+            Customer updatedCustomer = _customerRepository.UpdateCustomer(customer);
+            if (updatedCustomer != null)
+            {
+                return updatedCustomer;
+            }
+            return BadRequest($"Customer with Id {customer.Id} does not exist.");
+        }
     }
 }

@@ -4,8 +4,9 @@ namespace GroceryStoreAPI.Models
 {
     public interface ICustomerRepository
     {
-        IEnumerable<Customer> Customers { get; }
-        Customer AddCustomer(Customer customer);
+        IEnumerable<Customer> GetCustomers();
+        Customer GetCustomer(int id);
+        KeyValuePair<string, Customer> AddCustomer(Customer customer);
         Customer UpdateCustomer(Customer customer);
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GroceryStoreAPI.Tests.Controllers
 {
@@ -12,8 +13,7 @@ namespace GroceryStoreAPI.Tests.Controllers
     {
         private Customer _customerToAdd = new Customer() { Id = 3, Name = "Dan" };
         private Customer _customerToUpdate = new Customer() { Id = 2, Name = "Bill" };
-        private Dictionary<int, Customer> _customers = new Dictionary<int, Customer>();
-
+        
         #region Constructor
         [Test]
         public void Constructor_Fails_With_Invalid_Repository()
@@ -27,15 +27,14 @@ namespace GroceryStoreAPI.Tests.Controllers
         }
         #endregion
 
-
         [Test]
-        public void GetCustomers_ReturnsAllCustomers()
+        public void GetCustomers_ReturnsOK()
         {
             Mock<ICustomerRepository> mockRepository = _getMockCustomers();
             CustomerController customerController = new CustomerController(mockRepository.Object);
 
-            IEnumerable<Customer> result = customerController.GetCustomers();
-            Assert.That(mockRepository.Object.Customers == result);
+            ActionResult<IEnumerable<Customer>> result = customerController.GetCustomers().Result;
+            Assert.IsInstanceOf<OkObjectResult>(result.Result);
         }
 
         [Test]
@@ -44,8 +43,8 @@ namespace GroceryStoreAPI.Tests.Controllers
             Mock<ICustomerRepository> mockRepository = _getMockCustomers();
             CustomerController customerController = new CustomerController(mockRepository.Object);
             
-            Microsoft.AspNetCore.Mvc.ActionResult result = customerController.GetCustomer(1).Result;
-            Assert.IsInstanceOf<OkObjectResult>(result);
+            ActionResult<Customer> result = customerController.GetCustomer(1).Result;
+            Assert.IsInstanceOf<OkObjectResult>(result.Result);
         }
 
         [Test]
@@ -54,8 +53,8 @@ namespace GroceryStoreAPI.Tests.Controllers
             Mock<ICustomerRepository> mockRepository = _getMockCustomers();
             CustomerController customerController = new CustomerController(mockRepository.Object);
 
-            Microsoft.AspNetCore.Mvc.ActionResult result = customerController.GetCustomer(5).Result;
-            Assert.IsInstanceOf<BadRequestObjectResult>(result);
+            ActionResult<Customer> result = customerController.GetCustomer(999).Result;
+            Assert.IsInstanceOf<BadRequestObjectResult>(result.Result);
         }
 
         [Test]
@@ -64,8 +63,8 @@ namespace GroceryStoreAPI.Tests.Controllers
             Mock<ICustomerRepository> mockRepository = _getMockCustomers();
             CustomerController customerController = new CustomerController(mockRepository.Object);
 
-            Customer result = customerController.Post(_customerToAdd);
-            Assert.That(result == _customerToAdd);
+            ActionResult<Customer> result = customerController.Post(_customerToAdd);
+            Assert.That(result.Value == _customerToAdd);
         }
 
         [Test]
@@ -74,21 +73,25 @@ namespace GroceryStoreAPI.Tests.Controllers
             Mock<ICustomerRepository> mockRepository = _getMockCustomers();
             CustomerController customerController = new CustomerController(mockRepository.Object);
 
-            Customer result = customerController.Put(_customerToUpdate);
-            Assert.That(result == _customerToUpdate);
+            ActionResult<Customer> result = customerController.Put(_customerToUpdate);
+            Assert.That(result.Value == _customerToUpdate);
         }
 
 
         private Mock<ICustomerRepository> _getMockCustomers()
         {
-            _customers = new Dictionary<int, Customer>();
-            _customers.Add(0, new Customer { Id = 1, Name = "Bob" });
-            _customers.Add(1, new Customer { Id = 2, Name = "Mary" });
-            _customers.Add(2, new Customer { Id = 3, Name = "Joe" });
+            List<Customer> customers = new List<Customer>();
+            customers.Add(new Customer { Id = 1, Name = "Bob" });
+            customers.Add(new Customer { Id = 2, Name = "Mary" });
+            customers.Add(new Customer { Id = 3, Name = "Joe" });
 
+            CustomersModel model = new CustomersModel();
+            model.Customers = customers as ICollection<Customer>;
+            
             Mock<ICustomerRepository> mock = new Mock<ICustomerRepository>();
-            mock.Setup(m => m.Customers).Returns(_customers.Values);
-            mock.Setup(m => m.AddCustomer(It.IsAny<Customer>())).Returns(_customerToAdd);
+            mock.Setup(m => m.GetCustomers()).Returns(model.Customers);
+            mock.Setup(m => m.GetCustomer(1)).Returns(customers[1]);
+            mock.Setup(m => m.AddCustomer(It.IsAny<Customer>())).Returns(new KeyValuePair<string, Customer>(string.Empty, _customerToAdd));
             mock.Setup(m => m.UpdateCustomer(It.IsAny<Customer>())).Returns(_customerToUpdate);
 
             return mock;

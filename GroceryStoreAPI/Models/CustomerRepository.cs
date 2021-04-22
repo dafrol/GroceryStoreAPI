@@ -1,75 +1,80 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 
 namespace GroceryStoreAPI.Models
 {
     public class CustomerRepository : ICustomerRepository
     {
-        private Dictionary<int, Customer> _customerDictionary = new Dictionary<int, Customer>();
+        CustomersModel _customersModel;
         public CustomerRepository()
         {
-            string jsonString = File.ReadAllText("database.json");
-            try
-            {
-                JObject jsonObject = JObject.Parse(jsonString);
-
-                JArray customerValues = (JArray)jsonObject["customers"];
-
-                int count = 0;
-
-                foreach (JToken customer in customerValues)
-                {
-                    _customerDictionary.Add(count, new Customer
-                    {
-                        Id = (int)customer["id"],
-                        Name = customer["name"].ToString()
-                    });
-                    count++;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception: {ex.Message}");
-                throw;
-            }
+            string _jsonString = File.ReadAllText("database.json");
+            _customersModel = JsonConvert.DeserializeObject<CustomersModel>(_jsonString);
         }
 
-        public IEnumerable<Customer> Customers => _customerDictionary.Values;
-
-        public Customer AddCustomer(Customer customer)
+        public IEnumerable<Customer> GetCustomers()
         {
-            if (customer.Id >= 1 && !string.IsNullOrEmpty(customer.Name))
+            return new List<Customer>(_customersModel.Customers);
+        }
+
+        public Customer GetCustomer(int id)
+        {
+            foreach(Customer customer in _customersModel.Customers)
             {
-                _customerDictionary.Add(_customerDictionary.Count, customer);
-                return customer;
+                if (customer.Id == id)
+                {
+                    return customer;
+                }
             }
             return null;
+        }
+
+        public KeyValuePair<string, Customer> AddCustomer(Customer customer)
+        {
+            Customer existingCustomer = _customersModel.Customers.FirstOrDefault(x => x.Id == customer.Id);
+            if (existingCustomer != null)
+            {
+                return new KeyValuePair<string, Customer>($"Customer Id ({customer.Id}) already exists.", customer);
+            }
+
+            if (customer.Id < 1)
+            {
+                return new KeyValuePair<string, Customer>($"Customer Id {customer.Id} is invalid.", customer);
+            }
+
+            if (string.IsNullOrEmpty(customer.Name))
+            {
+                return new KeyValuePair<string, Customer>("Customer Name is invalid.", customer);
+            }
+
+            _customersModel.Customers.Add(customer);
+            _updateDatabase();
+
+            return new KeyValuePair<string, Customer>(string.Empty, customer);
         }
 
         public Customer UpdateCustomer(Customer customer)
         {
-            int customerKey = -1;
-            Customer customerToUpdate = new Customer();
-
-            foreach (var item in _customerDictionary)
+            foreach (Customer customerToUpdate in _customersModel.Customers)
             {
-                customerToUpdate = item.Value;
                 if (customerToUpdate.Id == customer.Id)
                 {
                     customerToUpdate.Name = customer.Name;
-                    customerKey = item.Key;
-                    break;
+                    return customerToUpdate;
                 }
-            }
-            if (customerKey >= 0)
-            {
-                _customerDictionary.Remove(customerKey);
-                _customerDictionary.Add(customerKey, customerToUpdate);
-                return customerToUpdate;
             }
             return null;
         }
+
+        private void _updateDatabase()
+        {
+            string updateString = JsonConvert.SerializeObject(_customersModel);
+            File.WriteAllText("database.json", updateString);
+        }
+
     }
 }
