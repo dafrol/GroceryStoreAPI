@@ -12,9 +12,20 @@ namespace GroceryStoreAPI.Models
     }
     public class Customer
     {
+        public int Id
+        {
+            get { return id; }
+            set { id = value; }
+        }
+        public string Name
+        {
+            get { return name; }
+            set { name = value; }
+        }
+        
         [JsonProperty(PropertyName = "id")]
-        public int Id { get; set; }
+        private int id { get; set; }
         [JsonProperty(PropertyName = "name")]
-        public string Name { get; set; }
+        private string name { get; set; }
     }
 }
