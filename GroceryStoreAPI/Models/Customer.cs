@@ -6,8 +6,14 @@ namespace GroceryStoreAPI.Models
 {
     public class CustomersModel
     {
+        public ICollection<Customer> Customers
+        {
+            get { return customers; }
+            set { customers = value; }
+        }
+
         [JsonProperty(PropertyName = "customers")]
-        public ICollection<Customer> Customers { get; set; }
+        private ICollection<Customer> customers;
     
     }
     public class Customer
@@ -22,10 +28,10 @@ namespace GroceryStoreAPI.Models
             get { return name; }
             set { name = value; }
         }
-        
+
         [JsonProperty(PropertyName = "id")]
-        private int id { get; set; }
+        private int id;
         [JsonProperty(PropertyName = "name")]
-        private string name { get; set; }
+        private string name;
     }
 }
